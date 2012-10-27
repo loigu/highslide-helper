@@ -7,9 +7,10 @@
 # TODO: other file types
 # TODO: multilayer galleries
 
-# TODO: size & thumbnail size config
+# TODO: image & thumbnail size config
 IMG_SIZE="1600x1200"
 THUMB_SIZE="144x144"
+ROTATION="-auto-orient" # rotate by default
 
 ORIGIN="${PWD}"
 
@@ -27,6 +28,7 @@ usage: $1 <args> TARGET_DIR [GALLERY NAME]
 	-T generate thumbnails
 	-H HIGHSLIDE_PATH path to highslide & config relative to TARGET_DIR
 	-f force regenerate all images (requested by other options)
+	-n don't rotate images
 	if no GALLERY NAME is given, basename of target dir will be used
 	
 END
@@ -46,7 +48,7 @@ function die()
 
 function parseArgs()
 {
-	while getopts hi:t:s:TH:f flag; do
+	while getopts hi:t:s:TH:fn flag; do
 		case ${flag} in
 			(h) printHelp; exit 0 ;;
 			(i) IMAGE_PATH="${OPTARG}" ;;
@@ -55,6 +57,7 @@ function parseArgs()
 			(T) GENERATE_THUMBNAILS=1 ;;
 			(H) HIGHSLIDE_PATH="${OPTARG}" ;;
 			(f) FORCE_REGENERATE=1 ;;
+			(n) ROTATION='' ;;
 			(*) die -h "unknown flag ${flag}" ;;
 		esac
 	done
@@ -106,7 +109,7 @@ function putStart()
 </head>
 
 <body style="background-color: black">
-echo '<h1 style="color:white">$1</h1>'
+<h1 style="color:white">$1</h1>
 <div class="highslide-gallery" style="margin: auto">
 
 END
@@ -135,8 +138,11 @@ function putList()
 	local THUMB_PATH="$3"
 	shift 3
 	
+	local LIST_GROUP=$(echo ${DIR_PATH} | tr -d '.," \t')
+	[ -n "${LIST_GROUP}" ] && local GROUPING=", { thumbnailId: '${LIST_GROUP}', slideshowGroup: '${LIST_GROUP}' }"
+	
 	for image in "$@"; do
-		echo "<a class='highslide' href='${DIR_PATH}/${image}' onclick=\"return hs.expand(this)\">"
+		echo "<a class='highslide' href='${DIR_PATH}/${image}' onclick=\"return hs.expand(this${GROUPING})\">"
 		echo "<img src='${THUMB_PATH}/${image}'/></a>"
 	done
 }
@@ -155,7 +161,7 @@ function scaleImages()
 	mkdir -p "${TARGET_DIR}" || die "can't create ${TARGET_DIR} dir"
 	for image in "$@"; do
 		[ ! "${FORCE_REGENERATE}" -a -f "${TARGET_DIR}/${image}" ] && continue
-		convert "${IMAGE_DIR}/${image}" -auto-orient -resize "${TARGET_SIZE}" "${TARGET_DIR}/${image}" || die "can't convert file ${image}"
+		convert "${IMAGE_DIR}/${image}" ${ROTATION} -resize "${TARGET_SIZE}" "${TARGET_DIR}/${image}" || die "can't convert file ${image}"
 	done
 }
 
