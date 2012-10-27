@@ -1,0 +1,13 @@
+/* Center the text in the caption */
+.highslide-caption {
+	width: 100%;
+	text-align: center;
+}
+
+/* Put the image number in front of the caption */
+.highslide-number {
+	display: inline;
+	padding-right: 1em;
+	color: black;
+}
+

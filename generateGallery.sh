@@ -165,7 +165,6 @@ checkConf
 cd "${TARGET_DIR}" || die "can't chdir to ${TARGET_DIR}"
 
 IMAGES=$(ls -1 "${IMAGE_PATH}" | xargs -d \\n file -i | sed -n 's/\([^:]*\):\ *image\/.*/\1/p')
-echo $IMAGES
 
 if [ "${SOURCE_DIR}" ]; then
 	scaleImages "${SOURCE_DIR}" "${IMAGE_PATH}" "${IMG_SIZE}" ${IMAGES}
