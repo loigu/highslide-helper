@@ -4,8 +4,12 @@
 # $3 highslide relative position
 # rest - gallery name
 
-# TODO: proper args, for example generateThumbs, resize, recursive, etc
 # TODO: other file types
+# TODO: multilayer galleries
+
+# TODO: size & thumbnail size config
+IMG_SIZE="1600x1200"
+THUMB_SIZE="144x144"
 
 ORIGIN="${PWD}"
 
@@ -19,8 +23,10 @@ usage: $1 <args> TARGET_DIR [GALLERY NAME]
 	-h print help
 	-i IMAGE_PATH path to images relative to TARGET_DIR
 	-t THUMBNAIL_PATH path to thumbnails relative to TARGET_DIR
+	-s SOURCE_DIR generate even the web gallery images (if missing), take them from SOURCE_DIR
 	-T generate thumbnails
 	-H HIGHSLIDE_PATH path to highslide & config relative to TARGET_DIR
+	-f force regenerate all images (requested by other options)
 	if no GALLERY NAME is given, basename of target dir will be used
 	
 END
@@ -40,13 +46,15 @@ function die()
 
 function parseArgs()
 {
-	while getopts hi:t:TH: flag; do
+	while getopts hi:t:s:TH:f flag; do
 		case ${flag} in
 			(h) printHelp; exit 0 ;;
 			(i) IMAGE_PATH="${OPTARG}" ;;
 			(t) THUMB_PATH="${OPTARG}" ;;
+			(s) SOURCE_DIR="${OPTARG}" ;;
 			(T) GENERATE_THUMBNAILS=1 ;;
 			(H) HIGHSLIDE_PATH="${OPTARG}" ;;
+			(f) FORCE_REGENERATE=1 ;;
 			(*) die -h "unknown flag ${flag}" ;;
 		esac
 	done
@@ -59,7 +67,7 @@ function parseArgs()
 
 function checkConf()
 {
-	[ ! -d "${TARGET_DIR}" ] && die -h "target dir must exist"
+	[ ! -d "${TARGET_DIR}" -a ! -d "${SOURCE_DIR}" ] && die -h "target or source dir must exist"
 	
 	[ -z "${IMAGE_PATH}" ] && IMAGE_PATH="."
 	[ -z "${THUMB_PATH}" ] && THUMB_PATH="./thumbs"
@@ -76,26 +84,30 @@ function putStart()
 {
 	tee << END
 
-<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"xhtml11.dtd\">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "xhtml11.dtd">
 <html>
 <head>
-<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <title>$1</title>
 
-<script type=\"text/javascript\" src=\"$2/highslide.js\"></script>
-<link rel=\"stylesheet\" type=\"text/css\" href=\"$2/highslide.css\" />
+<script type="text/javascript" src="$2/highslide.js"></script>
+<link rel="stylesheet" type="text/css" href="$2/highslide.css" />
 <!--[if lt IE 7]>
-<link rel=\"stylesheet\" type=\"text/css\" href=\"$2/highslide-ie6.css\" />
+<link rel="stylesheet" type="text/css" href="$2/highslide-ie6.css" />
 <![endif]-->
 
-<script type=\"text/javascript\" src="$2/config.js\"></script>
-<link rel=\"stylesheet\" type=\"text/css\" href="$2/global.css\"/>
+<script type="text/javascript">
+	hs.graphicsDir = '$2/graphics/';
+</script>
+<script type="text/javascript" src="$2/config.js"></script>
+<link rel="stylesheet" type="text/css" href="$2/global.css"/>
 
 <!-- overrides here -->
 </head>
 
-<body style=\"background-color: black\">
-<div class=\"highslide-gallery\" style=\"width: 600px; margin: auto\">
+<body style="background-color: black">
+echo '<h1 style="color:white">$1</h1>'
+<div class="highslide-gallery" style="margin: auto">
 
 END
 }
@@ -104,7 +116,7 @@ function putEnd()
 {
 	tee << END
 
-</div>
+</div> #highslide-gallery
 </body>
 </html>
 
@@ -115,34 +127,35 @@ END
 # $1 list name
 # $2 dir path
 # $3 thumb path
-# [$4 thumb image name] - hides rest of list under this image
-# STDIN list of files
+# $@ file list
 function putList()
 {
 	local LIST_NAME="$1"
 	local DIR_PATH="$2"
 	local THUMB_PATH="$3"
-	local THUMB_IMAGE="$4" # TODO: implement this
+	shift 3
 	
-	echo '<div class="highslide-gallery" style="width: 600px; margin: auto">'
-	echo "<h1>${LIST_NAME}</h1>"
-	
-	while read image; do
-		echo "<a class='highslide' href='${THUMB_PATH}/${image}' onclick=\"return hs.expand(this)\">"
-		echo "<img src='${DIR_PATH}/${image}'/></a>"
+	for image in "$@"; do
+		echo "<a class='highslide' href='${DIR_PATH}/${image}' onclick=\"return hs.expand(this)\">"
+		echo "<img src='${THUMB_PATH}/${image}'/></a>"
 	done
-	
-	echo '</div>' #highslide-gallery
 }
 
 # $1 where are images
-# $2 where to put thumbnails
-# stdin image list
-function generateThumbnails()
+# $2 where to put smaller images
+# $3 new size
+# $@ image names
+function scaleImages()
 {
-	mkdir -p "$2" || die "can't create thumb dir"
-	while read image; do
-		convert "$1/${image}" -auto-orient -resize 144x144 "$2/${image}" || die "can't convert file ${image}"
+	local IMAGE_DIR="$1"
+	local TARGET_DIR="$2"
+	local TARGET_SIZE="$3"
+	shift 3
+	
+	mkdir -p "${TARGET_DIR}" || die "can't create ${TARGET_DIR} dir"
+	for image in "$@"; do
+		[ ! "${FORCE_REGENERATE}" -a -f "${TARGET_DIR}/${image}" ] && continue
+		convert "${IMAGE_DIR}/${image}" -auto-orient -resize "${TARGET_SIZE}" "${TARGET_DIR}/${image}" || die "can't convert file ${image}"
 	done
 }
 
@@ -150,15 +163,22 @@ parseArgs "$@"
 checkConf
 
 cd "${TARGET_DIR}" || die "can't chdir to ${TARGET_DIR}"
-if [ "${GENERATE_THUMBNAILS}" ]; then
-	ls -1 "${IMAGE_PATH}" | xargs -n 1 basename | generateThumbnails "${IMAGE_PATH}" "${THUMB_PATH}"
+
+IMAGES=$(ls -1 "${IMAGE_PATH}" | xargs -d \\n file -i | sed -n 's/\([^:]*\):\ *image\/.*/\1/p')
+echo $IMAGES
+
+if [ "${SOURCE_DIR}" ]; then
+	scaleImages "${SOURCE_DIR}" "${IMAGE_PATH}" "${IMG_SIZE}" ${IMAGES}
 	[ "$?" -eq 0 ] || die "can't generate thumbnails"
 fi
 
-exit 0
+if [ "${GENERATE_THUMBNAILS}" ]; then 
+	scaleImages "${IMAGE_PATH}" "${THUMB_PATH}" "${THUMB_SIZE}" ${IMAGES}
+	[ "$?" -eq 0 ] || die "can't generate thumbnails"
+fi
 
 putStart "${GALLERY_NAME}" "${HIGHSLIDE_PATH}" > index.html || die "can't put start of html file"
-ls -1 "${IMAGE_PATH}" | xargs -n 1 basename | putList "${GALLERY_NAME}" "${IMAGE_PATH}" "${THUMB_PATH}" >> index.html
+putList "${GALLERY_NAME}" "${IMAGE_PATH}" "${THUMB_PATH}" ${IMAGES} >> index.html
 [ "$?" -eq 0 ] || die "can't put image list"
 putEnd >> index.html
 
