@@ -26,6 +26,18 @@ usage: $1 <args> TARGET_DIR [GALLERY NAME]
 END
 }
 
+function die()
+{
+	if [ "$1" = "-h" ]; then
+		printHelp >&2
+		shift 1
+	fi
+	
+	echo $* >&2
+	cd "${ORIGIN}"
+	exit 1
+}
+
 function parseArgs()
 {
 	while getopts hi:t:TH: flag; do
@@ -35,9 +47,10 @@ function parseArgs()
 			(t) THUMB_PATH="${OPTARG}" ;;
 			(T) GENERATE_THUMBNAILS=1 ;;
 			(H) HIGHSLIDE_PATH="${OPTARG}" ;;
-			(*) die "unknown flag ${flag}" ;;
+			(*) die -h "unknown flag ${flag}" ;;
 		esac
 	done
+	shift $(( OPTIND-1 ))
 	
 	TARGET_DIR="$1"
 	shift 1
@@ -46,22 +59,15 @@ function parseArgs()
 
 function checkConf()
 {
+	[ ! -d "${TARGET_DIR}" ] && die -h "target dir must exist"
+	
 	[ -z "${IMAGE_PATH}" ] && IMAGE_PATH="."
 	[ -z "${THUMB_PATH}" ] && THUMB_PATH="./thumbs"
 	[ -z "${HIGHSLIDE_PATH}" ] && HIGHSLIDE_PATH="."
-	[ -z "${GALLERY_NAME}" ] && GALLERY_NAME=$(basename ${TARGET_DIR} | tr "_" " ")
+	[ -z "${GALLERY_NAME}" ] && GALLERY_NAME=$(basename "${TARGET_DIR}" | tr "_" " ")
 	
-	[ ! -d "${TARGET_DIR}" ] && die "target dir must exist"
-	[ ! "${GENERATE_THUMBNAILS}" -a ! -d "${TARGET_DIR}/${THUMB_PATH}" ] && die "thumbs not requested but thumb dir doesn't exist"
-	
-	[ ! -f "${HIGHSLIDE_PATH}/highslide.css" -o ! -f "${HIGHSLIDE_PATH}/highslide-with-gallery.packed.js" -o ! -f "${HIGHSLIDE_PATH}/config.js" -o ! -f "${HIGHSLIDE_PATH}/default.css" ] && die "some highslide files missing"
-}
-
-function die()
-{
-	echo $* >&2
-	cd "${ORIGIN}"
-	exit 1
+	[ ! -f "${TARGET_DIR}/${HIGHSLIDE_PATH}/highslide.css" -o ! -f "${TARGET_DIR}/${HIGHSLIDE_PATH}/highslide.js" -o ! -f "${TARGET_DIR}/${HIGHSLIDE_PATH}/config.js" -o ! -f "${TARGET_DIR}/${HIGHSLIDE_PATH}/global.css" ] && echo "WARNING: some highslide files not found" >&2
+	[ ! -d "${TARGET_DIR}/${THUMB_PATH}" -a -z "${GENERATE_THUMBNAILS}" ] && echo "WARNING: thumbnails not requested while thumbnail path doesn't exist" >&2
 }
 
 # $1 gallery name
@@ -76,7 +82,7 @@ function putStart()
 <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />
 <title>$1</title>
 
-<script type=\"text/javascript\" src=\"$2/highslide-with-gallery.packed.js\"></script>
+<script type=\"text/javascript\" src=\"$2/highslide.js\"></script>
 <link rel=\"stylesheet\" type=\"text/css\" href=\"$2/highslide.css\" />
 <!--[if lt IE 7]>
 <link rel=\"stylesheet\" type=\"text/css\" href=\"$2/highslide-ie6.css\" />
@@ -140,14 +146,20 @@ function generateThumbnails()
 	done
 }
 
-parseArgs
+parseArgs "$@"
 checkConf
-exit 0
 
 cd "${TARGET_DIR}" || die "can't chdir to ${TARGET_DIR}"
+if [ "${GENERATE_THUMBNAILS}" ]; then
+	ls -1 "${IMAGE_PATH}" | xargs -n 1 basename | generateThumbnails "${IMAGE_PATH}" "${THUMB_PATH}"
+	[ "$?" -eq 0 ] || die "can't generate thumbnails"
+fi
+
+exit 0
+
 putStart "${GALLERY_NAME}" "${HIGHSLIDE_PATH}" > index.html || die "can't put start of html file"
 ls -1 "${IMAGE_PATH}" | xargs -n 1 basename | putList "${GALLERY_NAME}" "${IMAGE_PATH}" "${THUMB_PATH}" >> index.html
-[ "$?" = 0 ] || die "can't put image list"
+[ "$?" -eq 0 ] || die "can't put image list"
 putEnd >> index.html
 
 cd "${ORIGIN}"
