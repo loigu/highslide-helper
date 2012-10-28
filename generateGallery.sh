@@ -119,7 +119,7 @@ function putEnd()
 {
 	tee << END
 
-</div> #highslide-gallery
+</div> <!-- highslide-gallery -->
 </body>
 </html>
 
