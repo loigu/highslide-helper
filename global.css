@@ -24,16 +24,22 @@ div.album-name
 	font-weight:bold;
 }
 
+div.album-thumb
+{
+	display: table;
+	margin: 0 auto;
+	margin-bottom: 50px;
+}
+
 div.subalbum-name
 {
 	color: white;
 	font-size: 12pt;
 }
 
-div.album-thumb {
-	align: center;
-}
-
 span.thumb {
-	width: 150;
+	display: inline-block;
+	width: 210px;
+	text-align: center;
+	
 }
