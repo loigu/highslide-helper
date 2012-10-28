@@ -11,3 +11,29 @@
 	color: black;
 }
 
+body
+{
+	background-color: black;
+}
+
+div.album-name
+{
+	text-align: center;
+	color: white;
+	font-size: 20pt;
+	font-weight:bold;
+}
+
+div.subalbum-name
+{
+	color: white;
+	font-size: 12pt;
+}
+
+div.album-thumb {
+	align: center;
+}
+
+span.thumb {
+	width: 150;
+}
