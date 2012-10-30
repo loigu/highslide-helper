@@ -1,7 +1,16 @@
+
 /* Center the text in the caption */
-.highslide-caption {
+.highslide-caption
+{
 	width: 100%;
 	text-align: center;
+	font-size: 15pt;
+}
+
+
+.borderless .highslide-caption
+{
+	font-size: 15pt;
 }
 
 /* Put the image number in front of the caption */
@@ -31,10 +40,25 @@ div.album-thumb
 	margin-bottom: 50px;
 }
 
+div.thumbnails-wrapper
+{
+	display: table;
+	margin: 0 auto;
+}
+
 div.subalbum-name
 {
 	color: white;
-	font-size: 12pt;
+	font-size: 15pt;
+}
+
+span.subalbum-link
+{
+	display: inline-block;
+	width: 300px;
+	height: 300px;
+	text-align: center;
+	vertical-align: top;
 }
 
 span.thumb {
@@ -43,3 +67,20 @@ span.thumb {
 	text-align: center;
 	
 }
+
+img.subalbum-link {
+	width: auto;
+	height:200px;
+	text-align:center;
+}
+
+.highslide-thumbstrip-horizontal img {
+   width: auto;
+   height: 100px;
+}
+
+.highslide-thumbstrip-vertical img {
+   width: 150px;
+   height: auto;
+}
+

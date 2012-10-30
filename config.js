@@ -3,11 +3,10 @@
 	hs.fadeInOut = true;
 	hs.dimmingOpacity = 0.8;
 	hs.wrapperClassName = 'borderless floating-caption';
-	hs.captionEval = 'this.thumb.alt';
-	hs.marginBottom = 100 // make room for the floating caption and thumbstrip
+	//hs.captionEval = 'this.thumb.alt';
+	hs.marginBottom = 50; // make room for the floating caption and thumbstrip
 	hs.numberPosition = 'caption';
 	hs.lang.number = '%1/%2';
-
 
 	// Add the slideshow providing the controlbar and the thumbstrip
 	hs.addSlideshow({
@@ -24,8 +23,8 @@
 
 		},
 		thumbstrip: {
-			position: 'bottom center',
-			mode: 'horizontal',
+			position: 'right',
+			mode: 'vertical',
 			relativeTo: 'viewport'
 		}
 	});

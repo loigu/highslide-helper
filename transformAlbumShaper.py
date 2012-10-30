@@ -4,6 +4,8 @@ import xml.etree.cElementTree as ET
 import sys, os, string, re, shutil, hashlib, fnmatch
 
 # TODO: nicer block schema (div around links, block them, center them)
+# TODO: fix the first in thumbstrip
+# TODO: bigger thumbstrip
 
 # TODO: customize this
 highslidePath = '../../../highslide'
@@ -32,22 +34,30 @@ def matchFiles(directory, photos):
 			
 		# no luck yet, try thumb
 		if desc == None:
-			sum = md5sum(os.path.join(directory, filename[:filename.find('.')] + "_thumb.jpg"))
+			try:
+				sum = md5sum(os.path.join(directory, filename[:filename.find('.')] + "_thumb.jpg"))
+			except IOError:
+				sum = 'not a sum'
 			if sum in photos:
 				desc = photos[sum]
 				found = True
 				
 		# no luck yet, try slide
 		if desc == None:
-			sum = md5sum(os.path.join(directory, filename[:filename.find('.')] + "_slideshow.jpg"))
+			try:
+				sum = md5sum(os.path.join(directory, filename[:filename.find('.')] + "_slideshow.jpg"))
+			except IOError:
+				sum = 'not a sum'
 			if sum in photos:
 				desc = photos[sum]
 				found = True
 				
+		hidden = False
 		if not found:
 			print "photo " + filename + " not in album " + directory
+			hidden = True
 			
-		files.append({'name':filename, 'desc':desc})
+		files.append({'name':filename, 'desc':desc, 'hidden':hidden})
 		
 	return files
 
@@ -86,7 +96,7 @@ def parseSubalbum(subalbumTree):
 def generateSubalbum(f, subalbum, hidden):
 	global source
 	global target
-	subalbumDirName = subalbum['name'].translate(string.maketrans(" ", "_"))
+	subalbumDirName = subalbum['name'].translate(string.maketrans(" .", "__"), "'\"")
 	thumbsDirName = os.path.join(subalbumDirName, "thumbs")
 	sourceDir = os.path.join(source, 'img', subalbum['dir'])
 	targetDir = os.path.join(target, subalbumDirName)
@@ -95,7 +105,7 @@ def generateSubalbum(f, subalbum, hidden):
 	if not os.path.isdir(thumbsDir):
 		os.makedirs(thumbsDir)
 	
-	f.write('<div class="highslide-gallery">\n')
+	f.write('<span class="highslide-gallery">\n')
 	if hidden:
 		# copy subalbum thumbnail
 		if 'thumb' in subalbum and subalbum['thumb'] != None and len(subalbum['thumb']) > 0:
@@ -103,22 +113,26 @@ def generateSubalbum(f, subalbum, hidden):
 			subalbum['thumb'] = os.path.join(subalbumDirName, "thumb.jpg")
 		else:
 			# if there is no thumbnail, use first image
-			subablum['thumb'] = os.path.join(thumbsDirName, subalbum['photos'][0]['name'])
+			subalbum['thumb'] = os.path.join(thumbsDirName, subalbum['photos'][0]['name'])
 		
 		group = ", { thumbnailId: '" + subalbum['thumb'] + "', slideshowGroup: " + subalbum['dir'] + " }"
+		
+		f.write('\t<span class="subalbum-link">\n')
+		
+		# thumbnail with link to first photo & album name
+		f.write('\t<a class="highslide" id="' + subalbum['thumb'] + '" href="' + os.path.join(subalbumDirName, subalbum['photos'][0]['name']) + '" onclick="return hs.expand(this' + group + ')">\n')
+		f.write('\t\t<img src="' + subalbum['thumb'] + '" title="Click to view this album"/>\n\t</a>\n')
 		
 		# name (desc) if there is some
 		f.write('\t<div class="subalbum-name">' + subalbum['name'])
 		if subalbum['desc'] != None and len(subalbum['desc']) > 0:
 			f.write(' (' + subalbum['desc'] + ')')
 		f.write('</div>\n')
-		
-		# thumbnail with link to first photo & album name
-		f.write('\t<a class="highslide" id="' + subalbum['thumb'] + '" href="' + os.path.join(subalbumDirName, subalbum['photos'][0]['name']) + '" onclick="return hs.expand(this' + group + ')">\n')
-		f.write('\t\t<img src="' + subalbum['thumb'] + '"/>\n\t</a>\n')
+
+		f.write('\t</span>\n\n') # subalbum-link
 		
 		# append hidden container
-		f.write('\t<div class="hidden-container">\n')
+		f.write('\t<span class="hidden-container">\n')
 	else:
 		group = ''
 	
@@ -127,18 +141,18 @@ def generateSubalbum(f, subalbum, hidden):
 		shutil.copy(os.path.join(sourceDir, photo['name']), targetDir)
 		shutil.copyfile(os.path.join(sourceDir, photo['name'].partition('.')[0] + '_thumb.jpg'), os.path.join(thumbsDir, photo['name']))
 		
-		#  put / put with desc if present
-		if photo['desc'] != None and len(photo['desc']) > 0:
-			alt = ' alt="' + photo['desc'] + '" '
-		else:
-			alt = ''
-			
-		f.write('\t\t<span class="thumb"><a class="highslide" href="' + os.path.join(subalbumDirName, photo['name']) + '" onclick="return hs.expand(this' + group + ')">\n')
-		f.write("\t\t\t<img src='" + os.path.join(thumbsDirName, photo['name']) + "'" + alt + '/>\n\t\t</a></span>\n')
+		if not photo['hidden']:
+			f.write('\t\t<span class="thumb"><a id="' + subalbumDirName + '-' + photo['name'] + '" class="highslide" href="' + os.path.join(subalbumDirName, photo['name']) + '" onclick="return hs.expand(this' + group + ')">\n')
+			f.write("\t\t\t<img src='" + os.path.join(thumbsDirName, photo['name']) + "'/>\n\t\t</a>\n")
+		
+			#  put / put with desc if present
+			if photo['desc'] != None and len(photo['desc']) > 0:
+				f.write('\t\t\t<div class="highslide-caption">' + photo['desc'] + '</div>\n')
+			f.write('\t\t</span>\n\n')
 	
 	if hidden:
-		f.write('\t</div>\n') # hidden-container
-	f.write('</div>\n') # highslide-gallery
+		f.write('\t</span>\n') # hidden-container
+	f.write('</span>\n\n') # highslide-gallery
 
 # parse cmdline
 if len(sys.argv) < 3:
@@ -213,13 +227,16 @@ if len(subalbums) <= 1:
 	hidden = False
 else:
 	hidden = True
+	
+f.write('\t<div class="thumbnails-wrapper">\n\n')
 
 # iterate album(s)
 for subalbum in subalbums:
 	generateSubalbum(f, subalbum, hidden)
 	
 # close everything
-f.write('</body></html>')
+f.write('\t</div>\n') # thumbnails-wrapper
+f.write('</body></html>\n')
 f.close()
 
 exit(0)
