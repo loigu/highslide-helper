@@ -142,6 +142,7 @@ function putList()
 	[ -n "${LIST_GROUP}" ] && local GROUPING=", { thumbnailId: '${LIST_GROUP}', slideshowGroup: '${LIST_GROUP}' }"
 	
 	for image in "$@"; do
+		[ "${image}" = 'thumb.jpg' ] && continue
 		echo "<a class='highslide' href='${DIR_PATH}/${image}' onclick=\"return hs.expand(this${GROUPING})\">"
 		echo "<img src='${THUMB_PATH}/${image}'/></a>"
 	done
