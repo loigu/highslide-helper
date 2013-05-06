@@ -65,7 +65,7 @@ def generateSubalbum(f, subalbum):
 	subalbumThumbThumb =  os.path.join(thumbsDirName, subalbum['thumb'])
 	subalbumThumb = os.path.join(subalbumDirName, subalbum['thumb'])
 	
-	group = ", { thumbnailId: '" + subalbumThumb + "', slideshowGroup: " + subalbum['dir'] + " }"
+	group = ", { thumbnailId: '" + subalbumThumb + "', slideshowGroup: '" + subalbum['dir'] + "' }"
 	
 	f.write('\t<span class="subalbum-link">\n')
 	
@@ -93,7 +93,7 @@ def generateSubalbum(f, subalbum):
 # parse cmdline
 if len(sys.argv) < 3:
 	print "not enough parameters"
-	print "usage: " + sys.argv[0] + " <source dir> <target dir>"
+	print "usage: " + sys.argv[0] + " <source dir> <albumName>"
 	exit(1)
 
 # basic album info
