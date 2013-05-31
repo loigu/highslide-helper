@@ -43,7 +43,7 @@ def parseDir(directory, path):
 
 def parseDirs(target):
 	subalbums = []
-	for dirname in os.listdir(target):
+	for dirname in sorted(os.listdir(target)):
 		dirPath = os.path.join(target, dirname)
 		if os.path.isdir(dirPath) and not dirname.startswith('.'):
 			subalbums.append(parseDir(dirname, dirPath))
