@@ -115,11 +115,15 @@ function putStart()
 END
 }
 
+function endGallery()
+{
+	echo '</div> <!-- highslide-gallery -->'
+}
+
 function putEnd()
 {
 	tee << END
 
-</div> <!-- highslide-gallery -->
 </body>
 </html>
 
@@ -139,7 +143,7 @@ function putList()
 	shift 3
 	
 	local LIST_GROUP=$(echo ${DIR_PATH} | tr -d '.," \t')
-	[ -n "${LIST_GROUP}" ] && local GROUPING=", { thumbnailId: '${LIST_GROUP}', slideshowGroup: '${LIST_GROUP}' }"
+	[ -n "${LIST_GROUP}" -a "${LIST_GROUP}" != '/' ] && local GROUPING=", { thumbnailId: '${LIST_GROUP}', slideshowGroup: '${LIST_GROUP}' }"
 	
 	for image in "$@"; do
 		[ "${image}" = 'thumb.jpg' ] && continue
@@ -147,6 +151,28 @@ function putList()
 		echo "<img src='${THUMB_PATH}/${image}'/></a>"
 	done
 }
+
+function putVideos()
+{
+	echo '<ul>'
+	
+	for video in "$@"; do
+		local name=$(basename "$video")
+		tee << END
+<li>
+<video controls>
+  <source src="$video" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+<br/>
+<a href="$video">$name</a>
+</li>
+END
+	done
+
+	echo '</ul>'
+}
+
 
 # $1 where are images
 # $2 where to put smaller images
@@ -172,6 +198,7 @@ checkConf
 cd "${TARGET_DIR}" || die "can't chdir to ${TARGET_DIR}"
 
 IMAGES=$(ls -1 "${IMAGE_PATH}" | xargs -d \\n file -i | sed -n 's/\([^:]*\):\ *image\/.*/\1/p')
+VIDEOS=$(ls -1 "${IMAGE_PATH}" | xargs -d \\n file -i | sed -n 's/\([^:]*\):\ *video\/.*/\1/p')
 
 if [ "${SOURCE_DIR}" ]; then
 	scaleImages "${SOURCE_DIR}" "${IMAGE_PATH}" "${IMG_SIZE}" ${IMAGES}
@@ -186,6 +213,8 @@ fi
 putStart "${GALLERY_NAME}" "${HIGHSLIDE_PATH}" > index.html || die "can't put start of html file"
 putList "${GALLERY_NAME}" "${IMAGE_PATH}" "${THUMB_PATH}" ${IMAGES} >> index.html
 [ "$?" -eq 0 ] || die "can't put image list"
+endGallery >> index.html
+putVideos ${VIDEOS} >> index.html
 putEnd >> index.html
 
 cd "${ORIGIN}"
