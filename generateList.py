@@ -6,7 +6,7 @@ import xml.etree.cElementTree as ET
 def getAlbums(directory):
 	albums = []
 	
-	for dirname in fnmatch.filter(os.listdir(directory), "20[0-9][0-9]_*[0-9]_*[0-9]_*"):
+	for dirname in fnmatch.filter(sorted(os.listdir(directory)), "20[0-9][0-9]_*[0-9]_*[0-9]_*"):
 		xmlFile = os.path.join(directory, dirname, "Album.xml")
 		if os.path.isfile(xmlFile):
 			albumName = ET.parse(xmlFile).getroot().find('name').text
