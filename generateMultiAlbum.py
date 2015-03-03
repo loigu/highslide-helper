@@ -23,7 +23,7 @@ def parseDir(directory, path):
 		os.makedirs(thumbDir)
 	
 	photos = []
-	for file in fnmatch.filter(os.listdir(path), "*.[Jj][Pp][Gg]"):
+	for file in sorted(fnmatch.filter(os.listdir(path), "*.[Jj][Pp][Gg]")):
 		thumb = os.path.join(thumbDir, file)
 		if not os.path.isfile(thumb):
 			os.system("convert " + os.path.join(path, file) + " -resize " + THUMB_SIZE + " " + thumb)
