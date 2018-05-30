@@ -7,8 +7,8 @@ import sys, os, string, re, shutil, hashlib, fnmatch
 # TODO: fix the first in thumbstrip
 # TODO: bigger thumbstrip
 
-# TODO: customize this
-highslidePath = '../../../highslide'
+highslidePath = '../highslide'
+
 
 THUMB_SIZE="144x144"
 
@@ -100,6 +100,14 @@ if len(sys.argv) < 3:
 target = sys.argv[1]
 albumName = sys.argv[2]
 
+for i in ['..', '..', '..']:
+	if os.path.isdir(os.path.join(target,highslidePath)):
+		break
+	highslidePath = os.path.join(i, highslidePath)
+
+if not os.path.isdir(os.path.join(target, highslidePath)):
+	printf("warning: highslide not found")
+	
 # iterate albums
 subalbums = parseDirs(target)
 

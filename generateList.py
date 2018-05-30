@@ -55,7 +55,17 @@ def generateFooter(f):
 	f.write('</body></html>\n')
 	
 root = sys.argv[1]
-highslidePath = "../../highslide" # TODO: customize this
+highslidePath = "../highslide" # TODO: customize this
+if len(sys.argv) > 2:
+	highslidePath = sys.argv[2]
+	
+for i in ['..', '..', '..']:
+	if os.path.isdir(os.path.join(root,highslidePath)):
+		break
+	highslidePath = os.path.join(i, highslidePath)
+
+if not os.path.isdir(os.path.join(root, highslidePath)):
+	printf("warning: highslide not found")
 
 albums = getAlbums(root)
 f = open(os.path.join(root, 'index.html'), 'w')
